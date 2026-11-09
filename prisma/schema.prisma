@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
+enum TeamProfileStatus {
+  PENDING
+  REFRESHING
+  READY
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  RESEARCHING
+  READY
+  ARCHIVED
+}
+
+model User {
+  id          String     @id @default(cuid())
+  email       String     @unique
+  name        String?
+  role        UserRole   @default(MEMBER)
+  status      UserStatus @default(INVITED)
+  invitedById String?
+  invitedBy   User?      @relation("Invites", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitees    User[]     @relation("Invites")
+  createdAt   DateTime   @default(now())
+  lastLoginAt DateTime?
+
+  loginTokens  LoginToken[]
+  sessions     Session[]
+  leads        Lead[]
+  teamProfiles TeamProfile[]
+}
+
+model LoginToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+
+  @@index([userId])
+}
+
+// A team member's public LinkedIn profile. Every research run compares leads against all of them.
+model TeamProfile {
+  id              String            @id @default(cuid())
+  linkedinUrl     String            @unique
+  fullName        String?
+  headline        String?
+  summary         String?
+  education       Json              @default("[]")
+  employment      Json              @default("[]")
+  locations       Json              @default("[]")
+  expertise       String[]
+  status          TeamProfileStatus @default(PENDING)
+  error           String?
+  lastRefreshedAt DateTime?
+  addedById       String?
+  addedBy         User?             @relation(fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+// Versioned Jada profile and solutions; only an approved, active version may be used in briefs.
+model CompanyCatalogue {
+  id          String   @id @default(cuid())
+  version     String
+  contentHash String   @unique
+  approved    Boolean  @default(false)
+  approvedBy  String?
+  approvedOn  String?
+  isActive    Boolean  @default(false)
+  data        Json
+  importedAt  DateTime @default(now())
+}
+
+model Lead {
+  id          String        @id @default(cuid())
+  firstName   String
+  lastName    String?
+  company     String?
+  jobTitle    String?
+  profileUrl  String?
+  email       String?
+  country     String?
+  enquiryText String?
+  notes       String?
+  status      LeadStatus    @default(NEW)
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  runs        ResearchRun[]
+  photo       LeadPhoto?
+
+  @@index([createdById, createdAt])
+}
+
+// Kept apart from Lead so list queries never load image bytes. LinkedIn photo links expire, so the image itself is stored.
+model LeadPhoto {
+  leadId      String   @id
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  profileId   String
+  data        Bytes
+  contentType String
+  fetchedAt   DateTime @default(now())
+}
+
+enum RunStatus {
+  QUEUED
+  QUALIFYING
+  AWAITING_APPROVAL
+  IDENTIFYING
+  AWAITING_CONFIRMATION
+  RESEARCHING
+  WRITING
+  COMPLETE
+  PARTIAL
+  FAILED
+  CANCELLED
+  SCREENED_OUT
+}
+
+enum QualDecision {
+  QUALIFIED
+  DISQUALIFIED
+  NEEDS_REVIEW
+}
+
+enum CandidateConfidence {
+  STRONG
+  POSSIBLE
+  WEAK
+}
+
+enum SourceKind {
+  SEARCH_RESULT
+  PAGE
+  PROVIDED
+  SOCIAL_POST
+  COMPANY_PROFILE
+  JOB_LISTING
+}
+
+enum BriefSection {
+  WHO
+  CONNECTIONS
+  NOW
+  ACTIVITY
+  CONVERSATION
+  QUALIFICATION
+}
+
+enum ClaimKind {
+  FACT
+  COLLECTED
+  PROVIDED
+  POTENTIAL
+  HYPOTHESIS
+  UNAVAILABLE
+}
+
+// One research attempt for a lead. Counters enforce the per-brief budget.
+model ResearchRun {
+  id                  String        @id @default(cuid())
+  leadId              String
+  lead                Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  requestedById       String
+  status              RunStatus     @default(QUEUED)
+  stage               String?
+  error               String?
+  catalogueId         String?
+  selectedCandidateId String?
+  unidentified        Boolean       @default(false)
+  identityConfirmed   Boolean       @default(false)
+  screenBypassed      Boolean       @default(false)
+  forMemberId         String?
+  decision            QualDecision?
+  decisionData        Json?
+  overrideDecision    QualDecision?
+  overrideNote        String?
+  overriddenById      String?
+  overriddenAt        DateTime?
+  searches            Int           @default(0)
+  pagesFetched        Int           @default(0)
+  llmCalls            Int           @default(0)
+  postRuns            Int           @default(0)
+  inputTokens         Int           @default(0)
+  outputTokens        Int           @default(0)
+  limits              Json
+  activeMs            Int           @default(0)
+  deadlineAt          DateTime?
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @default(now()) @updatedAt
+
+  candidates IdentityCandidate[]
+  sources    Source[]
+  claims     Claim[]
+  brief      Brief?
+  messages   BriefMessage[]
+
+  @@index([leadId, createdAt])
+}
+
+model IdentityCandidate {
+  id         String              @id @default(cuid())
+  runId      String
+  run        ResearchRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  name       String
+  headline   String?
+  location   String?
+  confidence CandidateConfidence
+  matches    String[]
+  mismatches String[]
+  evidence   Json
+  createdAt  DateTime            @default(now())
+
+  @@index([runId])
+}
+
+model Source {
+  id          String      @id @default(cuid())
+  runId       String
+  run         ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  kind        SourceKind
+  url         String?
+  domain      String?
+  title       String?
+  publishedAt DateTime?
+  retrievedAt DateTime    @default(now())
+  // Retained so every claim's quote can be re-checked against what was actually read.
+  text        String
+  query       String?
+
+  claims Claim[]
+
+  @@index([runId])
+}
+
+model Claim {
+  id        String       @id @default(cuid())
+  runId     String
+  run       ResearchRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  section   BriefSection
+  kind      ClaimKind
+  statement String
+  sourceId  String?
+  source    Source?      @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  quote     String?
+  eventDate String?
+  detail    Json?
+  position  Int          @default(0)
+  createdAt DateTime     @default(now())
+  // A person's own changes: the statement they replaced is kept, and a removed claim is hidden rather than deleted.
+  hidden            Boolean   @default(false)
+  originalStatement String?
+  editedAt          DateTime?
+
+  @@index([runId, section])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+// The follow-up conversation about a finished brief. Proposed changes wait here until the person applies or dismisses them.
+model BriefMessage {
+  id        String      @id @default(cuid())
+  runId     String
+  run       ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String
+  citations String[]
+  proposals Json?
+  createdAt DateTime    @default(now())
+
+  @@index([runId, createdAt])
+}
+
+model Brief {
+  id         String      @id @default(cuid())
+  runId      String      @unique
+  run        ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  content    Json
+  model      String
+  rating     Int?
+  ratingNote String?
+  ratedAt    DateTime?
+  createdAt  DateTime    @default(now())
+}
+
+// One row of admin-editable rules for qualifying leads; absent until an admin first saves, then defaults apply.
+model QualificationSettings {
+  id               String   @id @default("default")
+  minEmployees     Int
+  minRevenueUsdM   Int
+  strongKeywords   String[]
+  weakKeywords     String[]
+  exceptionSectors String[]
+  updatedById      String?
+  updatedAt        DateTime @default(now()) @updatedAt
+}

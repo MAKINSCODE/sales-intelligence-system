@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Briefwell
 
-## Getting Started
+**Turn inbound leads into verified, evidence-backed sales briefings.**
 
-First, run the development server:
+Briefwell is an AI-powered sales intelligence tool that helps sales and executive teams qualify inbound leads, verify identities, research prospects and prepare for first conversations.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## The problem
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Preparing for a first conversation can mean hours of manual research: confirming who a lead is, understanding their company, assessing fit and finding a relevant way to approach them. The process is time-consuming, and unsupported or outdated information can lead teams in the wrong direction.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Qualifies leads** against business criteria such as professional email, company size, revenue and service fit—before resource-intensive research begins.
+2. **Verifies identity** by finding possible matches and requesting human confirmation when a person's identity is uncertain.
+3. **Researches prospects** using web search and LinkedIn data to gather relevant information about the person and their company.
+4. **Generates a briefing** with the prospect's background, company context, decision-makers, business signals and potential opportunities. Users can refine the briefing with AI-assisted chat and export it as a PDF.
 
-## Learn More
+## Designed for trustworthy research
 
-To learn more about Next.js, take a look at the following resources:
+Briefwell does more than generate a summary. Every claim is labelled as a **fact**, **hypothesis** or **unavailable**, and linked to a supporting source quotation so users can check the evidence. Sources are collected before the briefing is generated, and uncertain identities pass through a human review step before deeper research begins.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application uses a separate background worker and Redis queue for longer research tasks, keeping the web interface responsive. Configurable limits help control research time and API costs.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech stack
 
-## Deploy on Vercel
+- **Frontend:** Next.js, React, TypeScript, Tailwind CSS
+- **Backend & data:** Node.js, PostgreSQL, Prisma, Redis, BullMQ
+- **AI & research:** OpenAI API, Tavily, Apify
+- **Validation & testing:** Zod, Vitest, Playwright
+- **Infrastructure:** Docker
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Briefwell is a portfolio project that runs locally with Docker. It supports a no-cost demo mode using sample data and a live mode using external APIs. It is not currently deployed as a hosted service.

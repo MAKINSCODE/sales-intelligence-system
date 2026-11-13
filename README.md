@@ -15,7 +15,7 @@ Preparing for a first conversation can mean hours of manual research: confirming
 3. **Researches prospects** using web search and LinkedIn data to gather relevant information about the person and their company.
 4. **Generates a briefing** with the prospect's background, company context, decision-makers, business signals and potential opportunities. Users can refine the briefing with AI-assisted chat and export it as a PDF.
 
-## Designed for trustworthy research
+## Designed for Sales research
 
 Briefwell does more than generate a summary. Every claim is labelled as a **fact**, **hypothesis** or **unavailable**, and linked to a supporting source quotation so users can check the evidence. Sources are collected before the briefing is generated, and uncertain identities pass through a human review step before deeper research begins.
 
